@@ -41,7 +41,7 @@ void midi_send_drum_off(Instrument drum) {
   usart_send_char(0);
 }
 
-void midi_set_pitch_bend(u8 value) {
+void midi_set_pitch_bend(u16 value) {
   u8 channel = 0;
   usart_send_char(Status_Pitch_Bend | channel);
 

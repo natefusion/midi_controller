@@ -219,7 +219,7 @@ void midi_send_note_on(Note note, Volume vol);
 void midi_send_note_off(Note note);
 void midi_send_drum_on(Instrument drum, Volume vol);
 void midi_send_drum_off(Instrument drum);
-void midi_set_pitch_bend(u8 value);
+void midi_set_pitch_bend(u16 value);
 void midi_set_instrument(Instrument i);
 void midi_set_controller(Controller c, u8 value);
 

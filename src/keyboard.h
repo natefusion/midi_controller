@@ -21,11 +21,11 @@ typedef struct Hammer {
     Key key;
 } Hammer;
 
-bool key_has_struck(Key k);
+u8 key_has_struck(Key k);
 void key_update(Key k, u16 new_pos);
 
 Hammer hammer_make(void);
-bool hammer_has_struck(Hammer kh);
-bool hammer_update(Hammer h, u16 pos, u16 dt);
+u8 hammer_has_struck(Hammer kh);
+u8 hammer_update(Hammer h, u16 pos, u16 dt);
 
 #endif

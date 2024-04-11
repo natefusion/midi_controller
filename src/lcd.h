@@ -3,7 +3,7 @@
 
 #include "misc.h"
 
-typedef enum Lcd_Cmd : u8 {
+typedef enum Lcd_Cmd {
   Display_Clear = 0x1,
   Cursor_Return = 0x2,
   Cursor_Left = 0x4,

@@ -3,8 +3,7 @@
 
 #include "misc.h"
 
-// I put type specifiers on the enums. On cppreference (https://en.cppreference.com/w/c/language/enum) it says this is supported since c23
-typedef enum Status : u8 {
+typedef enum Status {
   Status_Note_On = 0x90,
   Status_Note_Off = 0x80,
   Status_Instrument_Set = 0xC0,
@@ -12,7 +11,7 @@ typedef enum Status : u8 {
   Status_Pitch_Bend = 0xE0,
 } Status;
 
-typedef enum Note : u8 {
+typedef enum Note {
   Note_C = 60,
   Note_CS,
   Note_D,
@@ -28,7 +27,7 @@ typedef enum Note : u8 {
   Note_Bb
 } Note;
 
-typedef enum Volume : u8 {
+typedef enum Volume {
   Volume_pppp = 8,
   Volume_ppp = 20,
   Volume_pp = 31,
@@ -40,7 +39,7 @@ typedef enum Volume : u8 {
   Volume_ffff = 127
 } Volume;
 
-typedef enum Controller : u8 {
+typedef enum Controller {
   Controller_Sound_Bank_Selection_MSB = 0,
   Controller_Modulation_Wheel = 1,
   Controller_Volume = 7,
@@ -52,7 +51,7 @@ typedef enum Controller : u8 {
   Controller_Notes_Off = 123,
 } Controller;
 
-typedef enum Instrument : u8 {
+typedef enum Instrument {
 // Piano:
   Acoustic_Grand_Piano,
   Bright_Acoustic_Piano,

@@ -45,16 +45,16 @@ void hammer_check(Hammer h) {
     }
 }
 
-bool hammer_has_struck(Hammer h) {
+u8 hammer_has_struck(Hammer h) {
     return h.pos > h.key.travel * 1.1;
 }
 
-bool key_has_struck(Key k) {
+u8 key_has_struck(Key k) {
     // TODO:
-    return false;
+    return 0;
 }
 
-bool hammer_update(Hammer h, u16 pos, u16 delta_time) {
+u8 hammer_update(Hammer h, u16 pos, u16 delta_time) {
     key_update(h.key, h.key.len * pos);
     hammer_update_speed(h, delta_time);
     hammer_check(h);

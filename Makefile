@@ -11,7 +11,7 @@ SRC = $(wildcard src/*.c)
 CC = avr-gcc
 OBJCOPY = avr-objcopy
 UPLOAD = avrdude
-FLAGS = -Wall -pedantic -pipe -Os -std=c2x -mmcu=$(DEVICE)
+FLAGS = -Wall -pedantic -pipe -Os -mmcu=$(DEVICE)
 debug: compile executable
 
 compile: $(SRC)

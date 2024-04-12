@@ -1,0 +1,4 @@
+devkit/
+target/
+midi_controller
+midi_controller.hex

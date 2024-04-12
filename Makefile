@@ -1,11 +1,25 @@
 PROJECT = $(notdir $(CURDIR))
-OUTPUT = target/$(PROJECT)
+OUTPUT = $(PROJECT)
 DEVICE = atmega328p
 
-all: mkdir debug
+ifeq ($(OS),Windows_NT)
+	PLATFORM_OS=WINDOWS
+else
+	UNAMEOS=$(shell uname)
+	ifeq ($(UNAMEOS),Linux)
+		PLATFORM_OS=LINUX
+	endif
+endif
 
-mkdir:
-	mkdir -p ./target/
+MAKE = make
+SERIAL = /dev/ttyACMO
+
+ifeq ($(PLATFORM_OS),WINDOWS)
+	MAKE = mingw32-make
+	SERIAL = COM3
+endif
+
+all: debug
 
 SRC = $(wildcard src/*.c)
 CC = avr-gcc
@@ -21,10 +35,4 @@ executable: $(OUTPUT)
 	$(OBJCOPY) -O ihex -R .eeprom $(OUTPUT) $(OUTPUT).hex
 
 upload: $(OUTPUT).hex
-	$(UPLOAD) -c arduino -p $(DEVICE) -b 115200 -P /dev/ttyACMO -U flash:w:"$(OUTPUT).hex":i
-
-.PHONY: clean
-
-clean:
-	rm -f ./target/*
-
+	$(UPLOAD) -c arduino -p $(DEVICE) -b 115200 -P $(SERIAL) -U flash:w:"$(OUTPUT).hex":i

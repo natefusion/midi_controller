@@ -213,13 +213,21 @@ typedef enum Instrument {
   Gunshot,
 } Instrument;
 
+/* Initializes serial port for communication */
 void midi_init(void);
+
 void midi_send_note_on(Note note, Volume vol);
 void midi_send_note_off(Note note);
 void midi_send_drum_on(Instrument drum, Volume vol);
 void midi_send_drum_off(Instrument drum);
+
+/* value of 0x2000 represents no pitch change
+   values of 0x2001-0x3FFF will raise the pitch
+   values of 0x0000-0x1FFF will lower the pitch */ 
 void midi_set_pitch_bend(u16 value);
+
 void midi_set_instrument(Instrument i);
-void midi_set_controller(Controller c, u8 value);
+
+void midi_set_controller(Controller c, u7 value);
 
 #endif

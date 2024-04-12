@@ -4,8 +4,6 @@
 #include "misc.h"
 
 void adc_init(void);
-u16 adc_read_port(u8 port);
+u10 adc_read_port(u3 port);
 
 #endif
-
-

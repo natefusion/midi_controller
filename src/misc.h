@@ -2,10 +2,13 @@
 #define MISC_H
 
 #define F_CPU 16000000
-/* #define mmcu __AVR_ATmega328P__ */
 
 typedef unsigned char u8;
-/* typedef unsigned char bool; */
+typedef unsigned char u3;
+typedef unsigned char u4;
+typedef unsigned char u7;
+typedef unsigned char u10;
+typedef unsigned char u14;
 typedef unsigned int u16;
 
 #endif

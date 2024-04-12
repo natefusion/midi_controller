@@ -14,35 +14,35 @@ void midi_init(void) {
 }
 
 void midi_send_note_on(Note note, Volume vol) {
-  u8 channel = 0;
+  u4 channel = 0;
   usart_send_char(Status_Note_On | channel);
   usart_send_char(note);
   usart_send_char(vol);
 }
 
 void midi_send_note_off(Note note) {
-  u8 channel = 0;
+  u4 channel = 0;
   usart_send_char(Status_Note_Off | channel);
   usart_send_char(note);
   usart_send_char(0);
 }
 
 void midi_send_drum_on(Instrument drum, Volume vol) {
-  u8 channel = 9;
+  u4 channel = 9;
   usart_send_char(Status_Note_On | channel);
   usart_send_char(drum);
   usart_send_char(vol);
 }
 
 void midi_send_drum_off(Instrument drum) {
-  u8 channel = 9;
+  u4 channel = 9;
   usart_send_char(Status_Note_Off | channel);
   usart_send_char(drum);
   usart_send_char(0);
 }
 
-void midi_set_pitch_bend(u16 value) {
-  u8 channel = 0;
+void midi_set_pitch_bend(u14 value) {
+  u4 channel = 0;
   usart_send_char(Status_Pitch_Bend | channel);
 
   u8 lsb = value & 0x007F;
@@ -52,13 +52,14 @@ void midi_set_pitch_bend(u16 value) {
 }
 
 void midi_set_instrument(Instrument i) {
-  u8 channel = 0;
+  u4 channel = 0;
   usart_send_char(Status_Instrument_Set | channel);
   usart_send_char(i);
 }
 
-void midi_set_controller(Controller c, u8 value) {
-  u8 channel = 0;
+void midi_set_controller(Controller c, u7 value) {
+  u4 channel = 0;
   usart_send_char(Status_Controller_Set | channel);
-  usart_send_char(c | value);
+  usart_send_char(c);
+  usart_send_char(value);
 }

@@ -22,7 +22,7 @@ typedef struct Hammer {
 } Hammer;
 
 u8 key_has_struck(Key k);
-void key_update(Key k, u16 new_pos);
+void key_update(Key k, u16 new_pos, u16 dt);
 
 Hammer hammer_make(void);
 u8 hammer_has_struck(Hammer kh);

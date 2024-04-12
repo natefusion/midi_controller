@@ -8,5 +8,5 @@
 #include "adc.h"
 
 int main(void) {
-    /* printf("BIG NEWS"); */
+    
 }

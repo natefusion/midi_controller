@@ -23,14 +23,13 @@ Hammer hammer_make(void) {
     return h;
 }
 
-void key_update(Key k, u16 new_pos) {
+void key_update(Key k, u16 new_pos, u16 dt) {
     k.pos_prev = k.pos;
-    k.pos = new_pos;
+    k.pos = new_pos * k.len;
+    k.speed = 3*(k.pos - k.pos_prev) / dt;
 }
 
-void hammer_update_speed(Hammer h, u16 dt) {
-    h.key.speed = 3*(h.key.pos - h.key.pos_prev) / dt;
-
+void hammer_update(Hammer h, u16 dt) {
     u16 original_speed = h.speed;
     h.speed -= h.gravity * dt;
     h.pos += (original_speed + h.speed) * dt / 2;
@@ -54,9 +53,9 @@ u8 key_has_struck(Key k) {
     return 0;
 }
 
-u8 hammer_update(Hammer h, u16 pos, u16 delta_time) {
-    key_update(h.key, h.key.len * pos);
-    hammer_update_speed(h, delta_time);
+u8 hammer_time_step(Hammer h, u16 pos, u16 delta_time) {
+    key_update(h.key, pos, delta_time);
+    hammer_update(h, delta_time);
     hammer_check(h);
     return hammer_has_struck(h);
 }

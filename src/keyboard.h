@@ -26,6 +26,6 @@ void key_update(Key k, u16 new_pos);
 
 Hammer hammer_make(void);
 u8 hammer_has_struck(Hammer kh);
-u8 hammer_update(Hammer h, u16 pos, u16 dt);
+u8 hammer_time_step(Hammer h, u16 pos, u16 dt);
 
 #endif

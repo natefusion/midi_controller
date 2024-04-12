@@ -224,7 +224,7 @@ void midi_send_drum_off(Instrument drum);
 /* value of 0x2000 represents no pitch change
    values of 0x2001-0x3FFF will raise the pitch
    values of 0x0000-0x1FFF will lower the pitch */ 
-void midi_set_pitch_bend(u16 value);
+void midi_set_pitch_bend(u14 value);
 
 void midi_set_instrument(Instrument i);
 

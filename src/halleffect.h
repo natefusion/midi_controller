@@ -3,13 +3,13 @@
 
 #include "misc.h"
 
-typedef enum Hall_Effect_Orentation {
+typedef enum Hall_Effect_Orientation {
     Positive_Gauss, Negative_Gauss,
-}
+} Hall_Effect_Orientation;
 
 typedef struct Hall_Effect {
     u8 port;
-    Orientation orientation;
+    Hall_Effect_Orientation orientation;
     u16 max_gauss_value;
     u16 min_gauss_value;
 } Hall_Effect;

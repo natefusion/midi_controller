@@ -4,28 +4,22 @@
 #include "misc.h"
 
 typedef struct Key {
-    u16 pos;
-    u16 pos_prev;
-    u16 pos_min;
-    u16 speed; 
-    u16 travel;
-    u16 len;
+    float pos;
+    float pos_prev;
+    float pos_min;
+    float pos_max;
+    float speed; 
 } Key;
 
 typedef struct Hammer {
-    u16 pos;
-    u16 speed;
-    u16 max_speed;
-    u16 travel;
-    u16 gravity;
+    float pos;
+    float speed;
+    float travel;
+    float gravity;
     Key key;
 } Hammer;
 
-u8 key_has_struck(Key k);
-void key_update(Key k, u16 new_pos, u16 dt);
-
-Hammer hammer_make(void);
-u8 hammer_has_struck(Hammer kh);
-u8 hammer_time_step(Hammer h, u16 pos, u16 dt);
+Hammer hammer_make(float min_sensor_value, float max_sensor_value);
+u8 hammer_update(Hammer* h, float pos, float dt);
 
 #endif

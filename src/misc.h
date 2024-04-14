@@ -3,12 +3,14 @@
 
 #define F_CPU 16000000
 
-typedef unsigned char u8;
-typedef unsigned char u3;
-typedef unsigned char u4;
-typedef unsigned char u7;
-typedef unsigned char u10;
-typedef unsigned char u14;
-typedef unsigned int u16;
+#include <stdint.h>
+
+typedef uint8_t u8;
+typedef uint8_t u3;
+typedef uint8_t u4;
+typedef uint8_t u7;
+typedef uint16_t u10;
+typedef uint16_t u14;
+typedef uint16_t u16;
 
 #endif

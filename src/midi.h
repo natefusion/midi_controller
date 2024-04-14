@@ -216,6 +216,8 @@ typedef enum Instrument {
 /* Initializes serial port for communication */
 void midi_init(void);
 
+void usart_printf(const char* fmt, ...);
+
 void midi_send_note_on(Note note, Volume vol);
 void midi_send_note_off(Note note);
 void midi_send_drum_on(Instrument drum, Volume vol);

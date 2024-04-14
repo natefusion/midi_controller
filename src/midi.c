@@ -1,10 +1,27 @@
 #include <avr/io.h>
 #include "midi.h"
 #include "misc.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 void usart_send_char(u8 c) {
   while (!(UCSR0A & (1 << UDRE0)));
   UDR0 = c;
+}
+
+void usart_printf(const char* fmt, ...) {
+    char buf[64];
+
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, 64, fmt, args);
+    va_end(args);
+
+    u16 i = 0;
+    while (buf[i]) {
+        usart_send_char(buf[i]);
+        ++i;
+    }
 }
 
 void midi_init(void) {

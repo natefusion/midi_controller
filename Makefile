@@ -12,7 +12,7 @@ else
 endif
 
 MAKE = make
-SERIAL = /dev/ttyACMO
+SERIAL = /dev/ttyACM0
 
 ifeq ($(PLATFORM_OS),WINDOWS)
 	MAKE = mingw32-make
@@ -26,6 +26,10 @@ CC = avr-gcc
 OBJCOPY = avr-objcopy
 UPLOAD = avrdude
 FLAGS = -Wall -pedantic -pipe -Os -mmcu=$(DEVICE)
+
+# I had to dig around the header files to find out why my floats weren't printing!
+FLAGS += -Wl,-u,vfprintf -lprintf_flt -lm
+
 debug: compile executable
 
 compile: $(SRC)

@@ -1,59 +1,42 @@
 #include "keyboard.h"
 
-Hammer hammer_make(float min_sensor_value, float max_sensor_value) {
-    Hammer h;
-    h.key = (Key) {
-        .pos = min_sensor_value,
-        .pos_prev = min_sensor_value,
-        .pos_min = min_sensor_value,
-        .pos_max = max_sensor_value,
-        .speed = 0.0f,
+Key_Hammer keyhammer_make(void) {
+    // velocity is measured in mm/s
+    // position is measured in mm
+    return (Key_Hammer) {
+        .key_pos = 0.0f,
+        .key_pos_prev = 0.0f,
+        .key_velocity = 0.0f,
+        .hammer_pos = 0.0f,
+        .hammer_velocity = 0.0f,
+        .hammer_travel = 5.0f,
+        .gravity = 9806.65f,
+        .hammer_is_striking = false,
+        .key_is_striking = false,
     };
-
-    h.note_sent = 0;
-    h.pos = 0.0f;
-    h.speed = 0.0f;
-    h.travel = 8;// (max_sensor_value - min_sensor_value) * 5;
-    
-    // 38.307 <- (femtometers / cycle^2),  (millimeters / second^2) ->  9806.65f / 5;
-    h.gravity = 9806.65f / 5.0f;
-
-    return h;
 }
 
-u8 key_update(Key* k, float pos, float dt) {
-    k->pos_prev = k->pos;
-    k->pos = pos;
-    k->speed = (k->pos - k->pos_prev) / dt;
+void keyhammer_update(Key_Hammer* kh, float pos, float dt) {
+    kh->key_pos_prev = kh->key_pos;
+    kh->key_pos = pos;
+    kh->key_velocity = (kh->key_pos - kh->key_pos_prev) / dt;
 
-    if (pos < 4.5f) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
+    float original_speed = kh->hammer_velocity;
+    kh->hammer_velocity -= kh->gravity * dt;
+    kh->hammer_pos += (original_speed + kh->hammer_velocity) * dt / 2;
 
-u8 hammer_update(Hammer* h, float pos, float dt) {
-    h->key.pos_prev = h->key.pos;
-    h->key.pos = pos;
-    h->key.speed = (h->key.pos - h->key.pos_prev) / dt;
-
-    float original_speed = h->speed;
-    h->speed -= h->gravity * dt;
-    h->pos += (original_speed + h->speed) * dt / 2;
-
-    if (h->pos < h->key.pos) {
-        h->pos = h->key.pos;
-        if (h->speed < h->key.speed) {
-            h->speed = h->key.speed;
+    if (kh->hammer_pos < kh->key_pos) {
+        kh->hammer_pos = kh->key_pos;
+        if (kh->hammer_velocity < kh->key_velocity) {
+            kh->hammer_velocity = kh->key_velocity;
         }
     }
 
-    u8 note_on = h->pos > h->travel;
-    if (note_on) {
-        h->speed = -h->speed;
-        h->pos = h->travel;
-    };
+    kh->key_is_striking = kh->key_pos < 5.2f;
+    kh->hammer_is_striking = kh->hammer_pos > kh->hammer_travel;
 
-    return note_on;
+    if (kh->hammer_is_striking) {
+        kh->hammer_velocity = -kh->hammer_velocity;
+        kh->hammer_pos = kh->hammer_travel;
+    }
 }

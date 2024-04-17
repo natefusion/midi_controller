@@ -2,26 +2,23 @@
 #define KEYBOARD_H
 
 #include "misc.h"
+#include <stdbool.h>
 
-typedef struct Key {
-    float pos;
-    float pos_prev;
-    float pos_min;
-    float pos_max;
-    float speed; 
-} Key;
-
-typedef struct Hammer {
-    float pos;
-    float speed;
-    float travel;
+typedef struct Key_Hammer {
+    float key_pos;
+    float key_pos_prev;
+    float key_velocity;
+    
+    float hammer_pos;
+    float hammer_velocity;
+    float hammer_travel;
+    
     float gravity;
-    u8 note_sent;
-    Key key;
-} Hammer;
+    bool hammer_is_striking;
+    bool key_is_striking;
+} Key_Hammer;
 
-Hammer hammer_make(float min_sensor_value, float max_sensor_value);
-u8 key_update(Key* k, float pos, float dt);
-u8 hammer_update(Hammer* h, float pos, float dt);
+Key_Hammer keyhammer_make(void);
+void keyhammer_update(Key_Hammer* h, float pos, float dt);
 
 #endif

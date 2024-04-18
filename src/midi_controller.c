@@ -16,6 +16,33 @@
 #define DELTA_TIME (float)SCALED_CYCLES_PER_LOOP * 8.0f / (float)F_CPU
 #define NUM_SENSORS 5
 
+char* Note_Name(Note note) {
+	switch(note) {
+		case Note_C: return "C";
+		case Note_CS: return "C#";
+		case Note_D: return "D";
+		case Note_E: return "E";
+		case Note_Eb: return "Eb";
+		case Note_F: return "F";
+		case Note_FS: return "F#";
+		case Note_G: return "G";
+		case Note_Ab: return "Ab";
+		case Note_A: return "A";
+		case Note_AS: return "A#";
+		case Note_B: return "B";
+		case Note_Bb: return "Bb";
+	}
+}
+
+Note starting_note = Note_C;
+
+void print_notes(){
+	for(u8 i = 0; i< 5; i++) {
+		
+	lcd_printf(Note_Name(starting_note + i));
+	}
+}
+
 void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
     for (u8 i = 0; i < NUM_SENSORS; ++i) {
         while ((PINB & 1) == 0) {
@@ -40,9 +67,18 @@ void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
     usart_printf("%s\n", "All Done!");
 }
 
+
+
+		
 int main(void) {
     midi_init();
     adc_init();
+	lcd_init();
+	sei();
+	PCICR = (1<<PCIE0);
+	PCMSK0 = 0xFF;
+	DDRB = 0x00;
+	
 
     Hall_Effect sensors[NUM_SENSORS] = {
         { .port = 0,
@@ -107,7 +143,7 @@ int main(void) {
     OCR1A = SCALED_CYCLES_PER_LOOP;
     TCNT1 = 0;
 
-    Note starting_note = Note_C;
+
     Instrument instrument = Acoustic_Grand_Piano;
     bool simulate_hammer = true;
 
@@ -155,8 +191,58 @@ int main(void) {
                 }
             }
         }
+		
+		
+		
+			
 
         while ((TIFR1 & (1 << OCF1A)) == 0);
         TIFR1 |= 1 << OCF1A;
     }
 }
+ISR(PCINT0_vect){
+	/*if((PINB & (1<<0))!=0) {
+			//usart_printf("viola");
+			lcd_cmd(Display_Clear);
+			_delay_us(2000);
+			lcd_goto(0,0);
+			lcd_printf("Viola");
+			
+		}*/
+	if((PINB & (1<<1))!=0) {
+			//usart_printf("trumpet");
+			lcd_cmd(Display_Clear);
+			_delay_us(2000);
+			lcd_goto(0,0);
+			lcd_printf("Trumpet");
+	
+			
+		}
+		if((PINB & (1<<2))!=0) {
+			starting_note++;
+			lcd_goto(0,0);
+			print_notes();
+			
+			
+			
+		}
+		if((PINB & (1<<3))!=0) {
+				//	usart_printf("keyboard");
+			lcd_cmd(Display_Clear);
+			_delay_us(2000);
+			lcd_goto(0,0);
+			lcd_printf("Keyboard");
+			
+		
+		}
+		if((PINB & (1<<4))!=0) {
+			//	usart_printf("tuba");
+			lcd_cmd(Display_Clear);
+			_delay_us(2000);
+			lcd_goto(0,0);
+			lcd_printf("Tuba");
+			
+			
+		}
+}		
+	

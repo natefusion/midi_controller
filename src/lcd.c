@@ -43,8 +43,8 @@ void send_data_lo(u8 x) {
 }
 
 void lcd_cmd(Lcd_Cmd cmd) {
+	cmd_mode();
   send_data_hi(cmd);
-  cmd_mode();
   poke_enable();
 
   send_data_lo(cmd);
@@ -52,8 +52,8 @@ void lcd_cmd(Lcd_Cmd cmd) {
 }
 
 void lcd_data(u8 data) {
+	data_mode();
   send_data_hi(data);
-  data_mode();
   poke_enable();
 
   send_data_lo(data);

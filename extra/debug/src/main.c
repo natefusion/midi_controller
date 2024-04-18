@@ -55,9 +55,9 @@ void audio_input_callback(void *buffer, unsigned int frames) {
     }    
 }
 
-int key = 3;
-int min_adc = 534;
-int max_adc = 843;
+int key = 0;
+int min_adc = 546;
+int max_adc = 813;
 
 double halleffect_distance_curve(int port, double index) {
     // magic numbers. oooooooooooh. aaaaaaaaaaaaah

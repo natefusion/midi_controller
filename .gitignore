@@ -4,4 +4,5 @@ target/
 midi_controller
 midi_controller.hex
 *.o
+*.a
 compile_commands.json

@@ -5,9 +5,9 @@
 #include <stdio.h>
 
 #define LCD_EN 2
-#define LCD_RS 0
+#define LCD_RS 3
 #define DATA PORTD
-#define CTRL PORTB
+#define CTRL PORTD
 
 void lcd_enable(void) {
   CTRL |= 1 << LCD_EN;
@@ -62,7 +62,6 @@ void lcd_data(u8 data) {
 
 void lcd_init(void) {
   DDRD = 0xFF;
-  DDRB = 0xFF;
   lcd_disable();
   lcd_cmd(0x33); // enable 4 bit mode
   lcd_cmd(0x32); // enable 4 bit mode part 2

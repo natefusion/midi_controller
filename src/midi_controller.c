@@ -109,7 +109,7 @@ int main(void) {
 
     Note starting_note = Note_C;
     Instrument instrument = Acoustic_Grand_Piano;
-    bool simulate_hammer = false;
+    bool simulate_hammer = true;
 
     // these numbers were hand picked arbitrarily
     i32 min_velocity = 0;
@@ -140,7 +140,7 @@ int main(void) {
                     kh->note_off_sent = true;
                 }
             } else {
-                // this still needs some work. 
+                // this still needs some work.
                 if (kh->key_is_striking) {
                     i32 velocity = -kh->key_velocity;
                     if (velocity < min_velocity) velocity = min_velocity;

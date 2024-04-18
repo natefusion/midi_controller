@@ -20,7 +20,7 @@
          (response (hall-effect-response magnetic-field q s m))
          (max-magnetic-field-reading (hall-effect-response m q s m))
          (result nil))
-    (do ((x 0.01 (+ x 0.01)))
+    (do ((x 0.01 (+ x 0.005)))
         ((<= response zero-response) result)
       (setf magnetic-field (B x)
             response (hall-effect-response magnetic-field q s m))
@@ -62,10 +62,18 @@
                                      n 1)))
                  finally (push (cons adc-value (/ sum n)) data)
                          (return (reverse data)))))
-    ;; (format t "float distance_in_mm[] = {~%    ~{~a~^,~}~%};" (process-data (collect-data q s m)))
     (process-data (collect-data q s m))))
 
-(defun linear-regression (data)
+(defun generate-array (q s m)
+  (format t "float distance_in_mm[] = {~%    ~{~a~^,~}~%};" (collect-hall-effect-data q s m)))
+
+;; (loop with data = (cdr (collect-hall-effect-data-pairs 2.615 1.685))
+;;                with regression = (power-regression (cdr (collect-hall-effect-data 2.615 1.685)))
+;;                for (x . y) in data
+;;                for x2 from 1
+;;                do (format t "(~a . ~a), (~a . ~a)~%" x y (+ 536 x2) (funcall regression x2)))
+
+(defun power-regression (data)
   (let ((sum-x 0)
         (sum-y 0)
         (sum-xy 0)
@@ -83,4 +91,6 @@
           finally (let* ((slope (/ (- (* n sum-xy) (* sum-x sum-y)) (- (* n sum-xx) (* sum-x sum-x))))
                          (intercept (exp (/ (- sum-y (* slope sum-x)) n)))
                          (r2 (expt (/ (- (* n sum-xy) (* sum-x sum-y)) (sqrt (* (- (* n sum-xx) (* sum-x sum-x)) (- (* n sum-yy) (* sum-y sum-y))))) 2)))
-                    (format t "slope: ~a~%intercept: ~a~%r2: ~a~%" slope intercept r2)))))
+                    (format t "slope: ~a~%intercept: ~a~%r2: ~a~%" slope intercept r2)
+                    (format t "~af * powf(index, ~af)" intercept slope)
+                    (return (lambda (x) (* intercept (expt x slope))))))))

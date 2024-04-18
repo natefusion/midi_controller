@@ -2,15 +2,15 @@
 
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <util/delay.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
 #include "lcd.h"
 #include "midi.h"
 #include "keyboard.h"
 #include "adc.h"
 #include "halleffect.h"
-#include <util/delay.h>
-#include <stdlib.h>
-#include <stdbool.h>
-
 
 #define SCALED_CYCLES_PER_LOOP 20000
 #define DELTA_TIME (float)SCALED_CYCLES_PER_LOOP * 8.0f / (float)F_CPU
@@ -44,78 +44,116 @@ int main(void) {
     midi_init();
     adc_init();
 
-    /* float min = 548.0f;//175.0f; */
-    /* float max = 800.0f;//520.0f; */
-
     Hall_Effect sensors[NUM_SENSORS] = {
-        { .port = 0, .min_adc = 546, .max_adc = 813, },
-        { .port = 1, .min_adc = 532, .max_adc = 880, },
-        { .port = 2, .min_adc = 543, .max_adc = 752, },
-        { .port = 3, .min_adc = 534, .max_adc = 843, },
-        { .port = 4, .min_adc = 548, .max_adc = 791, },
-    };
-    
-    Key_Hammer keyhammers[NUM_SENSORS] = {
-        keyhammer_make(),
-        keyhammer_make(),
-        keyhammer_make(),
-        keyhammer_make(),
-        keyhammer_make(),
+        { .port = 0,
+          .operational_min_adc = 532,
+          .operational_max_adc = 879,
+          .min_adc = 546,
+          .max_adc = 813,
+          .max_distance = halleffect_distance_curve(0, 1),
+          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
+          .min_distance = halleffect_distance_curve(1, 813 - 546 + 1),
+        },
+        { .port = 1,
+          .operational_min_adc = 518,
+          .operational_max_adc = 878,
+          .min_adc = 532,
+          .max_adc = 878,
+          .max_distance = halleffect_distance_curve(1, 1),
+          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
+          .min_distance = halleffect_distance_curve(1, 878 - 532 + 1),
+        },
+        { .port = 2,
+          .operational_min_adc = 527,
+          .operational_max_adc = 879,
+          .min_adc = 543,
+          .max_adc = 752,
+          .max_distance = halleffect_distance_curve(2, 1),
+          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
+          .min_distance = halleffect_distance_curve(1, 752 - 543 + 1),
+        },
+        { .port = 3,
+          .operational_min_adc = 518,
+          .operational_max_adc = 877,
+          .min_adc = 534,
+          .max_adc = 843,
+          .max_distance = halleffect_distance_curve(3, 1),
+          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
+          .min_distance = halleffect_distance_curve(1, 843 - 534 + 1),
+        },
+        { .port = 4,
+          .operational_min_adc = 536,
+          .operational_max_adc = 880,
+          .min_adc = 548,
+          .max_adc = 791,
+          .max_distance = halleffect_distance_curve(4, 1),
+          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
+          .min_distance = halleffect_distance_curve(1, 791 - 548 + 1),
+        },
     };
 
     /* calibrate(hammers); */
+    
+    Key_Hammer keyhammers[NUM_SENSORS] = {
+        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+    };
 
     TCCR1A = 0;
-    TCCR1B = (1 << WGM12) | (1 << CS11); // clk/8 prescaler
+    TCCR1B = (1 << WGM12) | (1 << CS11); // clk/8 prescaler and CTC mode
     OCR1A = SCALED_CYCLES_PER_LOOP;
     TCNT1 = 0;
 
     Note starting_note = Note_C;
     Instrument instrument = Acoustic_Grand_Piano;
-    bool simulate_hammer = false;
+    bool simulate_hammer = true;
 
-    // these numbers were hand picked
+    // these numbers were hand picked arbitrarily
     i32 min_velocity = 0;
     i32 max_velocity = 200;
 
     /* midi_set_instrument(instrument); */
-    u8 a = 4;
     bool button_down = false;
     while (1) {
-        u8 i = 4;
-        for (u8 i = 0; i < NUM_SENSORS; ++i) {
-            Key_Hammer *kh = &keyhammers[i];
-            Hall_Effect *sensor = &sensors[i];
+        u16 raw_adc = adc_read_port(3);
+        usart_send_char(raw_adc & 0xFF);
+        usart_send_char((raw_adc & 0xFF00) >> 8);
+        
+        /* for (u8 i = 0; i < NUM_SENSORS; ++i) { */
+        /*     Key_Hammer *kh = &keyhammers[i]; */
+        /*     Hall_Effect *sensor = &sensors[i]; */
 
-            u16 raw_adc = adc_read_port(i);
-            
-            // find more accurate value to replace 12.0f (hint: should be based on sensor measurements)
-            float position_mm = (float)halleffect_get_value(sensor, raw_adc);
+        /*     u16 raw_adc = adc_read_port(i); */
+        /*     // find more accurate value to replace 12.0f (hint: should be based on sensor measurements) */
+        /*     float position_mm = (float)halleffect_get_value(sensor, raw_adc); */
 
-            keyhammer_update(kh, position_mm, DELTA_TIME);
+        /*     keyhammer_update(kh, position_mm, DELTA_TIME); */
 
-            if (simulate_hammer) {
-                if (kh->hammer_is_striking) {
-                    // maybe remove the negative sign. Does it change the result?
-                    i32 velocity = (i32)(fabs(kh->hammer_velocity));
-                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
+        /*     if (simulate_hammer) { */
+        /*         if (kh->hammer_is_striking) { */
+        /*             // maybe remove the negative sign. Does it change the result? */
+        /*             i32 velocity = (i32)(fabs(kh->hammer_velocity)); */
+        /*             u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff); */
 
-                    midi_send_note_on(starting_note + i, volume);
-                }
-            } else {
-                if (kh->key_is_striking) {
-                    i32 velocity = (i32)(-kh->key_velocity);
-                    if (velocity < min_velocity) velocity = min_velocity;
-                    if (velocity > max_velocity) velocity = max_velocity;
+        /*             /\* midi_send_note_on(starting_note + i, volume); *\/ */
+        /*         } */
+        /*     } else { */
+        /*         if (kh->key_is_striking) { */
+        /*             i32 velocity = (i32)(-kh->key_velocity); */
+        /*             if (velocity < min_velocity) velocity = min_velocity; */
+        /*             if (velocity > max_velocity) velocity = max_velocity; */
 
-                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
+        /*             u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff); */
 
-                    if (i == a)
-                        usart_printf("velocity: %u", velocity);
-                    midi_send_note_on(starting_note + i, volume);
-                }
-            }
-        }
+        /*             /\* if (i == a) *\/ */
+        /*             /\*     usart_printf("velocity: %u", velocity); *\/ */
+        /*             /\* midi_send_note_on(starting_note + i, volume); *\/ */
+        /*         } */
+        /*     } */
+        /* } */
 
         while ((TIFR1 & (1 << OCF1A)) == 0);
         TIFR1 |= 1 << OCF1A;

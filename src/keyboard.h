@@ -18,7 +18,7 @@ typedef struct Key_Hammer {
     bool key_is_striking;
 } Key_Hammer;
 
-Key_Hammer keyhammer_make(void);
+Key_Hammer keyhammer_make(float);
 void keyhammer_update(Key_Hammer* h, float pos, float dt);
 
 #endif

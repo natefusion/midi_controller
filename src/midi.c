@@ -26,7 +26,8 @@ void usart_printf(const char* fmt, ...) {
 
 void midi_init(void) {
     UCSR0B = 1 << TXEN0;
-    UCSR0C = (1 << UPM01) | (1 << UCSZ01) | (1 << UCSZ00);
+    /* UCSR0C = (1 << UPM01) | (1 << UCSZ01) | (1 << UCSZ00); */
+    UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
     UBRR0L = 16; // 1 / (57600 * 16 / F_CPU) - 1;
 }
 
@@ -66,6 +67,12 @@ void midi_set_pitch_bend(u14 value) {
   u8 msb = (value & 0x7F00) >> 8;
   usart_send_char(lsb);
   usart_send_char(msb);
+}
+
+void midi_set_pressure(Note note, u7 value) {
+    u4 channel = 0;
+    usart_send_char(Status_Pressure | channel);
+    usart_send_char(value);
 }
 
 void midi_set_instrument(Instrument i) {

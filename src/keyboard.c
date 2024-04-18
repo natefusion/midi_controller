@@ -1,6 +1,6 @@
 #include "keyboard.h"
 
-Key_Hammer keyhammer_make(void) {
+Key_Hammer keyhammer_make(float travel) {
     // velocity is measured in mm/s
     // position is measured in mm
     return (Key_Hammer) {
@@ -9,7 +9,7 @@ Key_Hammer keyhammer_make(void) {
         .key_velocity = 0.0f,
         .hammer_pos = 0.0f,
         .hammer_velocity = 0.0f,
-        .hammer_travel = 5.0f,
+        .hammer_travel = travel,
         .gravity = 9806.65f,
         .hammer_is_striking = false,
         .key_is_striking = false,

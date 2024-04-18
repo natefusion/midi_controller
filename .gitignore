@@ -1,4 +1,7 @@
 devkit/
 target/
+.cache/
 midi_controller
 midi_controller.hex
+*.o
+compile_commands.json

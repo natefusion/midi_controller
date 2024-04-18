@@ -27,10 +27,12 @@ OBJCOPY = avr-objcopy
 UPLOAD = avrdude
 FLAGS = -Wall -pedantic -pipe -Os -mmcu=$(DEVICE)
 
-# I had to dig around the header files to find out why my floats weren't printing!
-FLAGS += -Wl,-u,vfprintf -lprintf_flt -lm
-
 debug: compile executable
+
+# I had to dig around the header files to find out why my floats weren't printing!
+debug: FLAGS += -Wl,-u,vfprintf -lprintf_flt -lm
+
+release: compile executable
 
 compile: $(SRC)
 	$(CC) $(SRC) -o $(OUTPUT) $(FLAGS)

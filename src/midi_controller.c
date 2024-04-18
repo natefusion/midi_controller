@@ -31,17 +31,28 @@ char* Note_Name(Note note) {
 		case Note_AS: return "A#";
 		case Note_B: return "B";
 		case Note_Bb: return "Bb";
+		default: return "";
 	}
 }
 
 Note starting_note = Note_C;
+u8 octave = 0;
+ bool simulate_hammer = true;
 
 void print_notes(){
+	Note note = starting_note;
 	for(u8 i = 0; i< 5; i++) {
-		
-	lcd_printf(Note_Name(starting_note + i));
+	lcd_printf(Note_Name(note));
+	note += 1;
+	if(note > (Note_Bb)) {
+			note = Note_C;
+		}
 	}
+	lcd_printf("%d",octave);
 }
+
+
+
 
 void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
     for (u8 i = 0; i < NUM_SENSORS; ++i) {
@@ -145,7 +156,7 @@ int main(void) {
 
 
     Instrument instrument = Acoustic_Grand_Piano;
-    bool simulate_hammer = true;
+    
 
     // these numbers were hand picked arbitrarily
     i32 min_velocity = 0;
@@ -201,48 +212,61 @@ int main(void) {
     }
 }
 ISR(PCINT0_vect){
-	/*if((PINB & (1<<0))!=0) {
-			//usart_printf("viola");
-			lcd_cmd(Display_Clear);
-			_delay_us(2000);
-			lcd_goto(0,0);
-			lcd_printf("Viola");
-			
-		}*/
+
 	if((PINB & (1<<1))!=0) {
-			//usart_printf("trumpet");
-			lcd_cmd(Display_Clear);
-			_delay_us(2000);
-			lcd_goto(0,0);
-			lcd_printf("Trumpet");
+			starting_note--;
+			if((starting_note < Note_C) && (octave == 0)) {
+				
+				starting_note = Note_C;
+				octave = 0;
+			}
+			else if(starting_note < Note_C) {
+				starting_note = Note_Bb;
+				octave -= 1;
+			}
+			
 	
 			
 		}
 		if((PINB & (1<<2))!=0) {
+
 			starting_note++;
-			lcd_goto(0,0);
-			print_notes();
+			if(starting_note > (Note_Bb)) {
+				starting_note = Note_C;
+				octave += 1;
+			}
+			
 			
 			
 			
 		}
 		if((PINB & (1<<3))!=0) {
-				//	usart_printf("keyboard");
-			lcd_cmd(Display_Clear);
-			_delay_us(2000);
-			lcd_goto(0,0);
-			lcd_printf("Keyboard");
+			simulate_hammer = !simulate_hammer;
+			
+				
 			
 		
 		}
-		if((PINB & (1<<4))!=0) {
-			//	usart_printf("tuba");
-			lcd_cmd(Display_Clear);
-			_delay_us(2000);
+		lcd_cmd(Display_Clear);
+		_delay_us(2000);
+		if(simulate_hammer == true){
+				
+				
+				lcd_goto(0,1);
+				lcd_printf("Piano Mode");
+			}
+			if(simulate_hammer == false) {
+				
+				
+				lcd_goto(0,1);
+				lcd_printf("Keyboard Mode");
+			}
+			
+			
 			lcd_goto(0,0);
-			lcd_printf("Tuba");
 			
+			print_notes();
 			
-		}
+		
 }		
 	

@@ -13,6 +13,15 @@
   avg: q=2.566, s=1.727
  */
 
+#define WINDOW_SIZE 5
+
+typedef struct Moving_Average {
+    u16 sum;
+    u16 average;
+    u16 readings[WINDOW_SIZE];
+    u16 index;
+} Moving_Average;
+
 typedef struct Hall_Effect {
     u8 port;
 
@@ -33,6 +42,8 @@ typedef struct Hall_Effect {
     // these are just the numbers from the magic function in halleffect.c at the max_adc and min_adc
     float max_distance;
     float min_distance;
+
+    Moving_Average ma;
 } Hall_Effect;
 
 float halleffect_distance_curve(u8 sensor, float index);

@@ -109,51 +109,52 @@ int main(void) {
 
     Note starting_note = Note_C;
     Instrument instrument = Acoustic_Grand_Piano;
-    bool simulate_hammer = true;
+    bool simulate_hammer = false;
 
     // these numbers were hand picked arbitrarily
     i32 min_velocity = 0;
-    i32 max_velocity = 200;
+    i32 max_velocity = 1000;
 
-    /* midi_set_instrument(instrument); */
-    bool button_down = false;
+    midi_set_instrument(instrument);
+
     while (1) {
-        u16 raw_adc = adc_read_port(3);
-        usart_send_char(raw_adc & 0xFF);
-        usart_send_char((raw_adc & 0xFF00) >> 8);
-        
-        /* for (u8 i = 0; i < NUM_SENSORS; ++i) { */
-        /*     Key_Hammer *kh = &keyhammers[i]; */
-        /*     Hall_Effect *sensor = &sensors[i]; */
+        for (u8 i = 0; i < NUM_SENSORS; ++i) {
+            Key_Hammer *kh = &keyhammers[i];
+            Hall_Effect *sensor = &sensors[i];
 
-        /*     u16 raw_adc = adc_read_port(i); */
-        /*     // find more accurate value to replace 12.0f (hint: should be based on sensor measurements) */
-        /*     float position_mm = (float)halleffect_get_value(sensor, raw_adc); */
+            float position_mm = (float)halleffect_get_value(sensor, adc_read_port(i));
 
-        /*     keyhammer_update(kh, position_mm, DELTA_TIME); */
+            keyhammer_update(kh, position_mm, DELTA_TIME);
 
-        /*     if (simulate_hammer) { */
-        /*         if (kh->hammer_is_striking) { */
-        /*             // maybe remove the negative sign. Does it change the result? */
-        /*             i32 velocity = (i32)(fabs(kh->hammer_velocity)); */
-        /*             u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff); */
+            if (simulate_hammer) {
+                if (kh->hammer_is_striking) {
+                    i32 velocity = -kh->hammer_velocity;
+                    if (velocity < min_velocity) velocity = min_velocity;
+                    if (velocity > max_velocity) velocity = max_velocity;
+                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
 
-        /*             /\* midi_send_note_on(starting_note + i, volume); *\/ */
-        /*         } */
-        /*     } else { */
-        /*         if (kh->key_is_striking) { */
-        /*             i32 velocity = (i32)(-kh->key_velocity); */
-        /*             if (velocity < min_velocity) velocity = min_velocity; */
-        /*             if (velocity > max_velocity) velocity = max_velocity; */
+                    midi_send_note_on(starting_note + i, volume);
+                    kh->note_off_sent = false;
+                } else if (!kh->note_off_sent) {
+                    midi_send_note_off(starting_note + i);
+                    kh->note_off_sent = true;
+                }
+            } else {
+                // this still needs some work. 
+                if (kh->key_is_striking) {
+                    i32 velocity = -kh->key_velocity;
+                    if (velocity < min_velocity) velocity = min_velocity;
+                    if (velocity > max_velocity) velocity = max_velocity;
+                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
 
-        /*             u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff); */
-
-        /*             /\* if (i == a) *\/ */
-        /*             /\*     usart_printf("velocity: %u", velocity); *\/ */
-        /*             /\* midi_send_note_on(starting_note + i, volume); *\/ */
-        /*         } */
-        /*     } */
-        /* } */
+                    midi_send_note_on(starting_note + i, volume);
+                    kh->note_off_sent = false;
+                } else if (!kh->note_off_sent) {
+                    midi_send_note_off(starting_note + i);
+                    kh->note_off_sent = true;
+                }
+            }
+        }
 
         while ((TIFR1 & (1 << OCF1A)) == 0);
         TIFR1 |= 1 << OCF1A;

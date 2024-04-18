@@ -10,9 +10,11 @@ Key_Hammer keyhammer_make(float travel) {
         .hammer_pos = 0.0f,
         .hammer_velocity = 0.0f,
         .hammer_travel = travel,
+        .key_strike_distance = travel - 2.0f,
         .gravity = 9806.65f,
         .hammer_is_striking = false,
         .key_is_striking = false,
+        .note_off_sent = false,
     };
 }
 
@@ -32,7 +34,7 @@ void keyhammer_update(Key_Hammer* kh, float pos, float dt) {
         }
     }
 
-    kh->key_is_striking = kh->key_pos < 5.2f;
+    kh->key_is_striking = kh->key_pos >= kh->key_strike_distance;
     kh->hammer_is_striking = kh->hammer_pos > kh->hammer_travel;
 
     if (kh->hammer_is_striking) {

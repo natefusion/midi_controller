@@ -1,6 +1,17 @@
+#include <math.h>
+
 #include "halleffect.h"
 #include "adc.h"
-#include <math.h>
+
+u16 movingaverage_process(Moving_Average *ma, u16 raw_adc) {
+    ma->sum -= ma->readings[ma->index];
+    ma->readings[ma->index] = raw_adc;
+    ma->sum += raw_adc;
+    ma->index = (ma->index+1) % WINDOW_SIZE;
+    ma->average = ma->sum / WINDOW_SIZE;
+
+    return ma->average;
+}
 
 float halleffect_distance_curve(u8 port, float index) {
     // magic numbers. oooooooooooh. aaaaaaaaaaaaah
@@ -22,23 +33,24 @@ float halleffect_distance_curve(u8 port, float index) {
 }
 
 float halleffect_get_value(Hall_Effect *sensor, u16 raw_adc) {
+    u16 averaged_adc = movingaverage_process(&sensor->ma, raw_adc);
+    
     // less than this means sensor is not calibrated or sensor jitter
     // it should always be greater than operational_min_adc
     // so we don't need to worry about leaving the function range
-    if (raw_adc < sensor->min_adc)
-        raw_adc = sensor->min_adc;
+    if (averaged_adc < sensor->min_adc)
+        averaged_adc = sensor->min_adc;
 
     // higher than this and the functions stop working...
-    if (raw_adc > sensor->operational_max_adc)
-        raw_adc = sensor->operational_max_adc;
+    if (averaged_adc > sensor->operational_max_adc)
+        averaged_adc = sensor->operational_max_adc;
     
-    u16 index = raw_adc - sensor->min_adc + 1;
+    u16 index = averaged_adc - sensor->min_adc + 1;
     u16 offset = 3; // the first values are not good, tweak this as necessary
     
-    if (raw_adc >= sensor->max_adc) {
+    if (averaged_adc >= sensor->max_adc) {
         index = sensor->max_adc - sensor->min_adc + 1;
     }
-    
 
     // We want the number to go up, not down, so subtract distance from sensor from max distance
     return sensor->max_distance - halleffect_distance_curve(sensor->port, (float)(index + offset));

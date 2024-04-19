@@ -13,7 +13,6 @@ Hall_Effect halleffect_make(u8 port, u16 op_min_adc, u16 op_max_adc, u16 min_adc
         .max_adc = max_adc,
         .max_distance = halleffect_distance_curve(port, 1.0f),
         .min_distance = halleffect_distance_curve(port, max_adc - min_adc + 1),
-        .parameter_changed = false,
 
         // haha. initialization matters.
         // I know this is automatically initialized to zero when a struct is created like this
@@ -54,21 +53,7 @@ float halleffect_distance_curve(u8 port, float index) {
 }
 
 float halleffect_get_value(Hall_Effect *sensor, u16 raw_adc) {
-    /* if (raw_adc < sensor->min_adc) { */
-    /*     sensor->min_adc = raw_adc; */
-    /*     sensor->parameter_changed = true; */
-    /* } */
-
-    /* if (raw_adc > sensor->max_adc) { */
-    /*     sensor->max_adc = raw_adc; */
-    /*     sensor->parameter_changed = true; */
-    /* } */
-
-    /* if (sensor->parameter_changed) { */
-    /*     sensor->min_distance = halleffect_distance_curve(sensor->port, sensor->max_adc - sensor->min_adc + 1); */
-    /* } */
-
-    u16 averaged_adc = movingaverage_process(&sensor->ma, raw_adc);
+     u16 averaged_adc = movingaverage_process(&sensor->ma, raw_adc);
     
     // less than this means sensor is not calibrated or sensor jitter
     // it should always be greater than operational_min_adc

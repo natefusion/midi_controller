@@ -18,8 +18,12 @@
 #include <signal.h>
 #include <pthread.h>
 
+typedef uint16_t u16;
+typedef uint8_t u8;
+
 #define MAX_SAMPLES 512
 #define MAX_SAMPLES_PER_UPDATE 4092
+#define NUM_SENSORS 5
 
 #define PX 1
 #define CM 1
@@ -55,34 +59,151 @@ void audio_input_callback(void *buffer, unsigned int frames) {
     }    
 }
 
-int key = 1;
-int min_adc = 558;
-int max_adc = 751;
-int offset = 3;
 
-double halleffect_distance_curve(int port, double index) {
+
+static uint16_t raw_adc = 0;
+static int serial = 0;
+
+bool RUN = true;
+
+void exit_cli(int sig) {
+	RUN = false;
+	printf("\nclosing down ... ");
+}
+
+void *read_serial(void * _) {
+    while (RUN) {
+        read(serial, &raw_adc, 2);
+    }
+
+    return NULL;
+}
+
+typedef struct Moving_Average {
+    u16 sum;
+    u16 average;
+    u16 readings[WINDOW_SIZE];
+    u16 index;
+} Moving_Average;
+
+typedef struct Hall_Effect {
+    u8 port;
+
+    // these four are measured in adc bits
+    
+    // these values were collected by measuring the sensor with no magnetic field
+    // and with the magnet of choice (not telling) touching the sensor
+    u16 operational_max_adc;
+    u16 operational_min_adc;
+
+    // these values should be measured when calibrating the keyboard
+    // the min should be greater than the operational min
+    // the max should be less than the operational max
+    u16 max_adc;
+    u16 min_adc;
+
+    // measured in mm
+    // these are just the numbers from the magic function in halleffect.c at the max_adc and min_adc
+    float max_distance;
+    float min_distance;
+
+    bool parameter_changed;
+
+    Moving_Average ma;
+} Hall_Effect;
+
+float halleffect_distance_curve(u8 port, float index) {
     // magic numbers. oooooooooooh. aaaaaaaaaaaaah
     switch (port) {
     case 0:
-        return 45.958904f * pow(index, -0.44967207f);
+        return 45.958904f * powf(index, -0.44967207f);
     case 1:
-        return 45.426605f * pow(index, -0.4443363f);
+        return 45.426605f * powf(index, -0.4443363f);
     case 2:
-        return 45.75797f * pow(index, -0.4476087f);
+        return 45.75797f * powf(index, -0.4476087f);
     case 3:
-        return 45.3737f * pow(index, -0.44436312f);
+        return 45.3737f * powf(index, -0.44436312f);
     case 4:
-        return 46.21221f * pow(index, -0.4514614f);
+        return 46.21221f * powf(index, -0.4514614f);
     default:
         // this should not execute. just here to make the compiler happy
         return 0.0f;
     }
 }
 
+Hall_Effect halleffect_make(u8 port, u16 op_min_adc, u16 op_max_adc, u16 min_adc, u16 max_adc) {
+    return (Hall_Effect) {
+        .port = port,
+        .operational_min_adc = op_min_adc,
+        .operational_max_adc = op_max_adc,
+        .min_adc = min_adc,
+        .max_adc = max_adc,
+        .max_distance = halleffect_distance_curve(port, 1.0f),
+        .min_distance = halleffect_distance_curve(port, max_adc - min_adc + 1),
+        .parameter_changed = false,
+
+        // haha. initialization matters.
+        // I know this is automatically initialized to zero when a struct is created like this
+        // but now it is certainly initialized
+        // without a doubt
+        // definitely
+        .ma = {0}, 
+    };
+}
+
+u16 movingaverage_process(Moving_Average *ma, u16 raw_adc) {
+    ma->sum -= ma->readings[ma->index];
+    ma->readings[ma->index] = raw_adc;
+    ma->sum += raw_adc;
+    ma->index = (ma->index+1) % WINDOW_SIZE;
+    ma->average = ma->sum / WINDOW_SIZE;
+
+    return ma->average;
+}
+
+float halleffect_get_value(Hall_Effect *sensor, u16 raw_adc) {
+    /* if (raw_adc < sensor->min_adc) { */
+    /*     sensor->min_adc = raw_adc; */
+    /*     sensor->parameter_changed = true; */
+    /* } */
+
+    /* if (raw_adc > sensor->max_adc) { */
+    /*     sensor->max_adc = raw_adc; */
+    /*     sensor->parameter_changed = true; */
+    /* } */
+
+    /* if (sensor->parameter_changed) { */
+    /*     sensor->min_distance = halleffect_distance_curve(sensor->port, sensor->max_adc - sensor->min_adc + 1); */
+    /* } */
+
+    u16 averaged_adc = movingaverage_process(&sensor->ma, raw_adc);
+    
+    // less than this means sensor is not calibrated or sensor jitter
+    // it should always be greater than operational_min_adc
+    // so we don't need to worry about leaving the function range
+    if (averaged_adc < sensor->min_adc)
+        averaged_adc = sensor->min_adc;
+
+    // higher than this and the functions stop working...
+    if (averaged_adc > sensor->operational_max_adc)
+        averaged_adc = sensor->operational_max_adc;
+    
+    float index = (float)(averaged_adc - sensor->min_adc + 1);
+    float offset = 3.0f;
+
+    /* if (averaged_adc >= sensor->max_adc) { */
+    /*     index = sensor->max_adc - sensor->min_adc + 1; */
+    /* } */
+
+    // We want the number to go up, not down, so subtract distance from sensor from max distance
+    return sensor->max_distance - halleffect_distance_curve(sensor->port, index + offset);
+}
+
 typedef struct Key_Hammer {
     float key_pos;
     float key_pos_prev;
     float key_velocity;
+    float key_strike_distance;
     
     float hammer_pos;
     float hammer_velocity;
@@ -91,9 +212,11 @@ typedef struct Key_Hammer {
     float gravity;
     bool hammer_is_striking;
     bool key_is_striking;
+    bool note_on_sent;
+    bool note_off_sent;
 } Key_Hammer;
 
-Key_Hammer keyhammer_make(void) {
+Key_Hammer keyhammer_make(float travel) {
     // velocity is measured in mm/s
     // position is measured in mm
     return (Key_Hammer) {
@@ -102,17 +225,20 @@ Key_Hammer keyhammer_make(void) {
         .key_velocity = 0.0f,
         .hammer_pos = 0.0f,
         .hammer_velocity = 0.0f,
-        .hammer_travel = halleffect_distance_curve(key, 1) - halleffect_distance_curve(key, max_adc - min_adc + 1),
-        .gravity = 9806.65,
+        .hammer_travel = travel + 0.01f * travel,
+        .key_strike_distance = travel - 2.0f,
+        .gravity = 9806.65f,
         .hammer_is_striking = false,
         .key_is_striking = false,
+        .note_on_sent = false,
+        .note_off_sent = false,
     };
 }
 
 void keyhammer_update(Key_Hammer* kh, float pos, float dt) {
     kh->key_pos_prev = kh->key_pos;
     kh->key_pos = pos;
-    kh->key_velocity = (kh->key_pos - kh->key_pos_prev) / dt;
+    kh->key_velocity = 1.1*(kh->key_pos - kh->key_pos_prev) / dt;
 
     float original_speed = kh->hammer_velocity;
     kh->hammer_velocity -= kh->gravity * dt;
@@ -136,26 +262,6 @@ void keyhammer_update(Key_Hammer* kh, float pos, float dt) {
         kh->hammer_pos = kh->hammer_travel;
     }
 }
-
-static uint16_t raw_adc = 0;
-static int serial = 0;
-
-bool RUN = true;
-
-void exit_cli(int sig) {
-	RUN = false;
-	printf("\nclosing down ... ");
-}
-
-void *read_serial(void * _) {
-    while (RUN) {
-        read(serial, &raw_adc, 2);
-    }
-
-    return NULL;
-}
-
-
 
 void key_and_hammer(void) {
     InitWindow(1000, 1000, "Analog");
@@ -223,9 +329,27 @@ void key_and_hammer(void) {
     double wait_time = 0.0;
     double delta_time = 0.0;
 
-    Key_Hammer h = keyhammer_make();
+    int port = 0;
 
-    double highest_value = halleffect_distance_curve(key, 1.0);
+    Hall_Effect sensors[NUM_SENSORS] = {
+        // don't change the second and third arguments please
+        halleffect_make(0, 532, 879, 546, 875),
+        halleffect_make(1, 518, 878, 533, 875),
+        halleffect_make(2, 527, 879, 541, 649),
+        halleffect_make(3, 518, 877, 537, 870),
+        halleffect_make(4, 536, 880, 548, 730),
+    };
+
+    Key_Hammer keyhammers[NUM_SENSORS] = {
+        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+        keyhammer_make(sensors[1].max_distance - sensors[1].min_distance),
+        keyhammer_make(sensors[2].max_distance - sensors[2].min_distance),
+        keyhammer_make(sensors[3].max_distance - sensors[3].min_distance),
+        keyhammer_make(sensors[4].max_distance - sensors[4].min_distance),
+    };
+
+    Key_Hammer h = keyhammers[port];
+    Hall_Effect sensor = sensors[port];
 
     while (!WindowShouldClose()) {
         PollInputEvents();
@@ -234,15 +358,15 @@ void key_and_hammer(void) {
 
         float current_adc = (float)raw_adc;
 
-        if (current_adc < min_adc) {
-            current_adc = min_adc;
+        float position_mm = (float)halleffect_get_value(&sensor, current_adc);
+
+        if (sensor.parameter_changed) {
+            h.hammer_travel = sensor.max_distance - sensor.min_distance;
+            sensor.parameter_changed = false;
         }
+            
+        keyhammer_update(&h, position_mm, delta_time);
 
-        /* printf("%f\n", current_adc); */
-
-        double trigger = highest_value - halleffect_distance_curve(key, current_adc - min_adc + 1 + offset);
-        
-        keyhammer_update(&h, trigger, delta_time);
 
         rham.y = baseline - h.hammer_pos;
         /* print_key_hammer(&h); */
@@ -251,7 +375,7 @@ void key_and_hammer(void) {
             ClearBackground(RAYWHITE);
             DrawRectanglePro(rham, (Vector2){ 0, rham.height / 2 }, 0.0f, BLACK);
             /* DrawText(TextFormat("h.pos: %f\nh.key.pos: %f\nsensor: %f\nrham.y: %f\nvelocity: %f\n", h.hammer_pos, h.key_pos, trigger, rham.y, h.key_velocity), 0, 0, 20, BLACK); */
-            DrawText(TextFormat("ADC: %f\nTrigger: %f\nTravel: %f\n", current_adc, trigger, h.hammer_travel), 0, 0, 20, BLACK);
+            DrawText(TextFormat("ADC: %f\nTrigger: %f\nTravel: %f\n", current_adc, position_mm, h.hammer_travel), 0, 0, 20, BLACK);
             if (h.hammer_is_striking) {
                 ClearBackground(GREEN);
                 /* printf("VELOCITY: %f\n", h.speed); */

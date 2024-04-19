@@ -21,7 +21,8 @@
 #define BUTTON_RIGHT 3
 
 static Note starting_note = Note_C;
-static bool simulate_hammer = true;
+static bool simulate_hammer = false;
+static bool turn_all_notes_off = false;
 
 void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
     lcd_display_clear();
@@ -39,10 +40,12 @@ void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
     }
     
     for (u8 i = 0; i < NUM_SENSORS; ++i) {
+        u16 val = 0;
         while ((PINB & (1 << BUTTON_RIGHT)) == 0) {
             lcd_display_clear();
             lcd_goto(0,0);
-            lcd_printf("#%d max is %d", i, adc_read_port(i));
+            val = adc_read_port(i);
+            lcd_printf("#%d max is %d", i, val);
             lcd_goto(0,1);
             lcd_printf("%s", "Press 3");
             _delay_ms(100);
@@ -50,18 +53,19 @@ void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
 
         _delay_ms(1000);
 
-        sensors[i].max_adc = adc_read_port(i);
+        sensors[i].max_adc = val;
 
         while ((PINB & (1 << BUTTON_RIGHT)) == 0) {
             lcd_display_clear();
             lcd_goto(0,0);
-            lcd_printf("#%d min is %d", i, adc_read_port(i));
+            val = adc_read_port(i);
+            lcd_printf("#%d min is %d", i, val);
             lcd_goto(0,1);
             lcd_printf("%s", "Press 3");
             _delay_ms(100);
         }
 
-        sensors[i].min_adc = adc_read_port(i);
+        sensors[i].min_adc = val;
 
         _delay_ms(1000);
     }
@@ -86,7 +90,7 @@ void redraw_lcd(void) {
 }
 
 void debug(Hall_Effect sensors[NUM_SENSORS]) {
-    u8 port = 4;
+    u8 port = 0;
     u16 val = adc_read_port(port);//movingaverage_process(&sensors[port].ma, adc_read_port(port));
     usart_send_char(val & 0x00FF);
     usart_send_char((val & 0xFF00) >> 8);
@@ -99,7 +103,7 @@ int main(void) {
 
     Hall_Effect sensors[NUM_SENSORS] = {
         // don't change the second and third arguments please
-        halleffect_make(0, 532, 879, 547, 871),
+        halleffect_make(0, 532, 879, 545, 868),
         halleffect_make(1, 518, 878, 533, 875),
         halleffect_make(2, 527, 879, 541, 649),
         halleffect_make(3, 518, 877, 537, 870),
@@ -131,11 +135,14 @@ int main(void) {
     TCNT1 = 0;
 
     // these numbers were hand picked arbitrarily
-    i32 min_velocity = 0;
-    i32 max_velocity = 1000;
 
     while (1) {
         /* debug(sensors); */
+        if (turn_all_notes_off) {
+            midi_set_controller(Controller_Notes_Off, 0);
+            turn_all_notes_off = false;
+        }
+        
         for (u8 i = 0; i < NUM_SENSORS; ++i) {
             Key_Hammer *kh = &keyhammers[i];
             Hall_Effect *sensor = &sensors[i];
@@ -143,43 +150,45 @@ int main(void) {
 
             float position_mm = (float)halleffect_get_value(sensor, adc_read_port(i));
 
-            /* if (sensor->parameter_changed) { */
-            /*     kh->hammer_travel = sensor->max_distance - sensor->min_distance; */
-            /*     sensor->parameter_changed = false; */
-            /* } */
-            
             keyhammer_update(kh, position_mm, DELTA_TIME);
 
             if (simulate_hammer) {
                 if (kh->hammer_is_striking) {
+                    i32 min_velocity = 100;
+                    i32 max_velocity = 1000;
                     i32 velocity = -kh->hammer_velocity;
                     if (velocity < min_velocity) velocity = min_velocity;
                     if (velocity > max_velocity) velocity = max_velocity;
-                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
-                    /* if (i == 0)usart_printf("PING with position %f and pos %f\n", position_mm, kh->hammer_pos); */
+                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_ppp, Volume_fff);
                     midi_send_note_on(note, volume);
-                    kh->note_off_sent = false;
                     kh->note_on_sent = true;
-                } else if (!kh->note_off_sent) {
-                    midi_send_note_off(note);
-                    kh->note_off_sent = true;
-                    kh->note_on_sent = false;
+                }
+
+                if (kh->note_on_sent) {
+                    if (kh->hammer_pos < kh->hammer_travel) {
+                        midi_send_note_off(note);
+                        kh->note_on_sent = false;
+                    }
                 }
             } else {
                 // this still needs some work.
                 if (kh->key_is_striking && !kh->note_on_sent) {
-                    i32 velocity = -kh->key_velocity;
+                    i32 min_velocity = 90;
+                    i32 max_velocity = 150;
+                    i32 velocity = kh->key_velocity;
+                                   
                     if (velocity < min_velocity) velocity = min_velocity;
                     if (velocity > max_velocity) velocity = max_velocity;
-                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
-
+                    u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_ppp, Volume_fff);
                     midi_send_note_on(note, volume);
-                    kh->note_off_sent = false;
                     kh->note_on_sent = true;
-                } else if (!kh->note_off_sent && kh->note_on_sent ) {
-                    midi_send_note_off(note);
-                    kh->note_off_sent = true;
-                    kh->note_on_sent = false;
+                }
+
+                if (kh->note_on_sent) {
+                    if (kh->key_pos < kh->key_strike_distance) {
+                        midi_send_note_off(note);
+                        kh->note_on_sent = false;
+                    }
                 }
             }
         }
@@ -195,9 +204,15 @@ ISR(PCINT0_vect) {
     bool right = PINB & (1 << BUTTON_RIGHT);
 
     if (left) {
-        if (starting_note > 0) starting_note -= 1;
+        if (starting_note > 0) {
+            starting_note -= 1;
+            turn_all_notes_off = true;
+        }
     } else if (middle) {
-        if (starting_note < 0x7F) starting_note += 1;
+        if (starting_note < 0x7F) {
+            starting_note += 1;
+            turn_all_notes_off = true;
+        }
     } else if (right) {
         simulate_hammer = !simulate_hammer;
     }

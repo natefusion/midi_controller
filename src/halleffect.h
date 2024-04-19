@@ -43,8 +43,6 @@ typedef struct Hall_Effect {
     float max_distance;
     float min_distance;
 
-    bool parameter_changed;
-
     Moving_Average ma;
 } Hall_Effect;
 

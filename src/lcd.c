@@ -98,9 +98,9 @@ void lcd_display_clear(void) {
 }
 
 void lcd_goto(u8 x, u8 y) {
-  Lcd_Cmd first_char_adr[] = { 
-    [0] = Cursor_Line_One, 
-    [1] = Cursor_Line_Two,
+  const Lcd_Cmd first_char_adr[] = { 
+      [0] = Cursor_Line_One, 
+      [1] = Cursor_Line_Two,
   };
   
   lcd_cmd(first_char_adr[y] + x);

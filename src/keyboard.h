@@ -22,6 +22,6 @@ typedef struct Key_Hammer {
 } Key_Hammer;
 
 Key_Hammer keyhammer_make(float travel);
-void keyhammer_update(Key_Hammer* h, float pos, float dt);
+void keyhammer_update(Key_Hammer* kh, float pos, float dt);
 
 #endif

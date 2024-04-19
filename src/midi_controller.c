@@ -135,7 +135,7 @@ int main(void) {
     i32 max_velocity = 1000;
 
     while (1) {
-        debug(sensors);
+        /* debug(sensors); */
         for (u8 i = 0; i < NUM_SENSORS; ++i) {
             Key_Hammer *kh = &keyhammers[i];
             Hall_Effect *sensor = &sensors[i];
@@ -156,12 +156,12 @@ int main(void) {
                     if (velocity < min_velocity) velocity = min_velocity;
                     if (velocity > max_velocity) velocity = max_velocity;
                     u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
-                    if (i == 0)usart_printf("PING with position %f and pos %f\n", position_mm, kh->hammer_pos);
-                    /* midi_send_note_on(note, volume); */
+                    /* if (i == 0)usart_printf("PING with position %f and pos %f\n", position_mm, kh->hammer_pos); */
+                    midi_send_note_on(note, volume);
                     kh->note_off_sent = false;
                     kh->note_on_sent = true;
                 } else if (!kh->note_off_sent) {
-                    /* midi_send_note_off(note); */
+                    midi_send_note_off(note);
                     kh->note_off_sent = true;
                     kh->note_on_sent = false;
                 }

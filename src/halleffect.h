@@ -43,10 +43,14 @@ typedef struct Hall_Effect {
     float max_distance;
     float min_distance;
 
+    bool parameter_changed;
+
     Moving_Average ma;
 } Hall_Effect;
 
+Hall_Effect halleffect_make(u8 port, u16 op_min_adc, u16 op_max_adc, u16 min_adc, u16 max_adc);
 float halleffect_distance_curve(u8 sensor, float index);
 float halleffect_get_value(Hall_Effect *sensor, u16 rawADC);
+u16 movingaverage_process(Moving_Average *ma, u16 raw_adc);
 
 #endif

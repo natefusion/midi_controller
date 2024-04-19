@@ -17,6 +17,7 @@ typedef struct Key_Hammer {
     float gravity;
     bool hammer_is_striking;
     bool key_is_striking;
+    bool note_on_sent;
     bool note_off_sent;
 } Key_Hammer;
 

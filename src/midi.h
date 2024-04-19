@@ -23,9 +23,8 @@ typedef enum Note {
   Note_G,
   Note_Ab,
   Note_A,
-  Note_AS,
+  Note_Bb,
   Note_B,
-  Note_Bb
 } Note;
 
 typedef enum Volume {
@@ -213,6 +212,8 @@ typedef enum Instrument {
   Applause,
   Gunshot,
 } Instrument;
+
+char *note_range_tostring(Note note);
 
 /* Initializes serial port for communication */
 void midi_init(void);

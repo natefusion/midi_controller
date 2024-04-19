@@ -10,7 +10,7 @@ void usart_send_char(u8 c) {
 }
 
 void usart_printf(const char* fmt, ...) {
-    char buf[64];
+    static char buf[64];
 
     va_list args;
     va_start(args, fmt);
@@ -24,9 +24,26 @@ void usart_printf(const char* fmt, ...) {
     }
 }
 
+char *note_range_tostring(Note note) {
+    switch ((note % 12) + Note_C) {
+    case Note_C:  return "C,C#,D,Eb,E";
+    case Note_CS: return "C#,D,Eb,E,F";
+    case Note_D:  return "D,Eb,E,F,F#";
+    case Note_Eb: return "Eb,E,F,F#,G";
+    case Note_E:  return "E,F,F#,G,Ab";
+    case Note_F:  return "F,F#,G,Ab,A";
+    case Note_FS: return "F#,G,Ab,A,Bb";
+    case Note_G:  return "G,Ab,A,Bb,B";
+    case Note_Ab: return "Ab,A,Bb,B,C";
+    case Note_A:  return "A,Bb,B,C,C#";
+    case Note_Bb: return "Bb,B,C,C#,D";
+    case Note_B:  return "B,C,C#,D,Eb";
+    default: return "";
+    }
+}
+
 void midi_init(void) {
     UCSR0B = 1 << TXEN0;
-    /* UCSR0C = (1 << UPM01) | (1 << UCSZ01) | (1 << UCSZ00); */
     UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
     UBRR0L = 16; // 1 / (57600 * 16 / F_CPU) - 1;
 }

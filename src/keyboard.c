@@ -14,6 +14,7 @@ Key_Hammer keyhammer_make(float travel) {
         .gravity = 9806.65f,
         .hammer_is_striking = false,
         .key_is_striking = false,
+        .note_on_sent = false,
         .note_off_sent = false,
     };
 }

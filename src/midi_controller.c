@@ -16,161 +16,138 @@
 #define DELTA_TIME (float)SCALED_CYCLES_PER_LOOP * 8.0f / (float)F_CPU
 #define NUM_SENSORS 5
 
-char* Note_Name(Note note) {
-	switch(note) {
-		case Note_C: return "C";
-		case Note_CS: return "C#";
-		case Note_D: return "D";
-		case Note_E: return "E";
-		case Note_Eb: return "Eb";
-		case Note_F: return "F";
-		case Note_FS: return "F#";
-		case Note_G: return "G";
-		case Note_Ab: return "Ab";
-		case Note_A: return "A";
-		case Note_AS: return "A#";
-		case Note_B: return "B";
-		case Note_Bb: return "Bb";
-		default: return "";
-	}
-}
+#define BUTTON_LEFT 1
+#define BUTTON_MIDDLE 2
+#define BUTTON_RIGHT 3
 
-Note starting_note = Note_C;
-u8 octave = 0;
- bool simulate_hammer = true;
-
-void print_notes(){
-	Note note = starting_note;
-	for(u8 i = 0; i< 5; i++) {
-	lcd_printf(Note_Name(note));
-	note += 1;
-	if(note > (Note_Bb)) {
-			note = Note_C;
-		}
-	}
-	lcd_printf("%d",octave);
-}
-
-
-
+static Note starting_note = Note_C;
+static bool simulate_hammer = true;
 
 void calibrate(Hall_Effect sensors[NUM_SENSORS]) {
+    lcd_display_clear();
+    lcd_goto(0, 0);
+    lcd_printf("%s", "Calibrate?");
+    lcd_goto(0, 1);
+    lcd_printf("%s", "1 - yes, 2 - no");
+
+    while (1) {
+        if (PINB & (1 << BUTTON_LEFT))
+            break;
+
+        if (PINB & (1 << BUTTON_MIDDLE))
+            return;
+    }
+    
     for (u8 i = 0; i < NUM_SENSORS; ++i) {
-        while ((PINB & 1) == 0) {
-            usart_printf("%d max %d\n", i, adc_read_port(i));
+        while ((PINB & (1 << BUTTON_RIGHT)) == 0) {
+            lcd_display_clear();
+            lcd_goto(0,0);
+            lcd_printf("#%d max is %d", i, adc_read_port(i));
+            lcd_goto(0,1);
+            lcd_printf("%s", "Press 3");
             _delay_ms(100);
         }
 
+        _delay_ms(1000);
+
         sensors[i].max_adc = adc_read_port(i);
 
-        _delay_ms(2000);
-
-        while ((PINB & 1) == 0) {
-            usart_printf("%d min %d\n", i, adc_read_port(i));
+        while ((PINB & (1 << BUTTON_RIGHT)) == 0) {
+            lcd_display_clear();
+            lcd_goto(0,0);
+            lcd_printf("#%d min is %d", i, adc_read_port(i));
+            lcd_goto(0,1);
+            lcd_printf("%s", "Press 3");
             _delay_ms(100);
         }
 
         sensors[i].min_adc = adc_read_port(i);
 
-        _delay_ms(2000);
+        _delay_ms(1000);
     }
 
-    usart_printf("%s\n", "All Done!");
+    lcd_display_clear();
+    lcd_printf("%s", "All Done!");
+    _delay_ms(1000);
 }
 
+void redraw_lcd(void) {
+    lcd_display_clear();
 
+    lcd_goto(0,0);
+    lcd_printf("%s %d", note_range_tostring(starting_note), starting_note / 12);
+    
+    lcd_goto(0,1);
+    if(simulate_hammer){
+        lcd_printf("%s", "Piano Sim On");
+    } else {
+        lcd_printf("%s", "Piano Sim Off");
+    }
+}
 
-		
+void debug(Hall_Effect sensors[NUM_SENSORS]) {
+    u8 port = 4;
+    u16 val = adc_read_port(port);//movingaverage_process(&sensors[port].ma, adc_read_port(port));
+    usart_send_char(val & 0x00FF);
+    usart_send_char((val & 0xFF00) >> 8);
+}
+        
 int main(void) {
     midi_init();
     adc_init();
-	lcd_init();
-	sei();
-	PCICR = (1<<PCIE0);
-	PCMSK0 = 0xFF;
-	DDRB = 0x00;
-	
+    lcd_init();
 
     Hall_Effect sensors[NUM_SENSORS] = {
-        { .port = 0,
-          .operational_min_adc = 532,
-          .operational_max_adc = 879,
-          .min_adc = 546,
-          .max_adc = 813,
-          .max_distance = halleffect_distance_curve(0, 1),
-          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
-          .min_distance = halleffect_distance_curve(1, 813 - 546 + 1),
-        },
-        { .port = 1,
-          .operational_min_adc = 518,
-          .operational_max_adc = 878,
-          .min_adc = 532,
-          .max_adc = 878,
-          .max_distance = halleffect_distance_curve(1, 1),
-          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
-          .min_distance = halleffect_distance_curve(1, 878 - 532 + 1),
-        },
-        { .port = 2,
-          .operational_min_adc = 527,
-          .operational_max_adc = 879,
-          .min_adc = 543,
-          .max_adc = 752,
-          .max_distance = halleffect_distance_curve(2, 1),
-          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
-          .min_distance = halleffect_distance_curve(1, 752 - 543 + 1),
-        },
-        { .port = 3,
-          .operational_min_adc = 518,
-          .operational_max_adc = 877,
-          .min_adc = 534,
-          .max_adc = 843,
-          .max_distance = halleffect_distance_curve(3, 1),
-          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
-          .min_distance = halleffect_distance_curve(1, 843 - 534 + 1),
-        },
-        { .port = 4,
-          .operational_min_adc = 536,
-          .operational_max_adc = 880,
-          .min_adc = 548,
-          .max_adc = 791,
-          .max_distance = halleffect_distance_curve(4, 1),
-          //                                           v-----v-- ENSURE THESE NUMBERS ARE CHANGED IF min_adc OR max_adc CHANGE
-          .min_distance = halleffect_distance_curve(1, 791 - 548 + 1),
-        },
+        // don't change the second and third arguments please
+        halleffect_make(0, 532, 879, 547, 871),
+        halleffect_make(1, 518, 878, 533, 875),
+        halleffect_make(2, 527, 879, 541, 649),
+        halleffect_make(3, 518, 877, 537, 870),
+        halleffect_make(4, 536, 880, 548, 730),
     };
 
-    /* calibrate(hammers); */
-    
     Key_Hammer keyhammers[NUM_SENSORS] = {
         keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
-        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
-        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
-        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
-        keyhammer_make(sensors[0].max_distance - sensors[0].min_distance),
+        keyhammer_make(sensors[1].max_distance - sensors[1].min_distance),
+        keyhammer_make(sensors[2].max_distance - sensors[2].min_distance),
+        keyhammer_make(sensors[3].max_distance - sensors[3].min_distance),
+        keyhammer_make(sensors[4].max_distance - sensors[4].min_distance),
     };
+
+    calibrate(sensors);
+
+    redraw_lcd();
+
+    DDRB &= ~(1 << BUTTON_LEFT);
+    DDRB &= ~(1 << BUTTON_MIDDLE);
+    DDRB &= ~(1 << BUTTON_RIGHT);
+    sei();
+    PCICR = (1<<PCIE0);
+    PCMSK0 = (1 << BUTTON_LEFT) | (1 << BUTTON_MIDDLE) | (1 << BUTTON_RIGHT);
 
     TCCR1A = 0;
     TCCR1B = (1 << WGM12) | (1 << CS11); // clk/8 prescaler and CTC mode
     OCR1A = SCALED_CYCLES_PER_LOOP;
     TCNT1 = 0;
 
-
-    Instrument instrument = Acoustic_Grand_Piano;
-    
-
     // these numbers were hand picked arbitrarily
     i32 min_velocity = 0;
     i32 max_velocity = 1000;
 
-    midi_set_instrument(instrument);
-
     while (1) {
+        debug(sensors);
         for (u8 i = 0; i < NUM_SENSORS; ++i) {
             Key_Hammer *kh = &keyhammers[i];
             Hall_Effect *sensor = &sensors[i];
+            Note note = starting_note + i;
 
             float position_mm = (float)halleffect_get_value(sensor, adc_read_port(i));
 
+            /* if (sensor->parameter_changed) { */
+            /*     kh->hammer_travel = sensor->max_distance - sensor->min_distance; */
+            /*     sensor->parameter_changed = false; */
+            /* } */
+            
             keyhammer_update(kh, position_mm, DELTA_TIME);
 
             if (simulate_hammer) {
@@ -179,94 +156,51 @@ int main(void) {
                     if (velocity < min_velocity) velocity = min_velocity;
                     if (velocity > max_velocity) velocity = max_velocity;
                     u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
-
-                    midi_send_note_on(starting_note + i, volume);
+                    if (i == 0)usart_printf("PING with position %f and pos %f\n", position_mm, kh->hammer_pos);
+                    /* midi_send_note_on(note, volume); */
                     kh->note_off_sent = false;
+                    kh->note_on_sent = true;
                 } else if (!kh->note_off_sent) {
-                    midi_send_note_off(starting_note + i);
+                    /* midi_send_note_off(note); */
                     kh->note_off_sent = true;
+                    kh->note_on_sent = false;
                 }
             } else {
                 // this still needs some work.
-                if (kh->key_is_striking) {
+                if (kh->key_is_striking && !kh->note_on_sent) {
                     i32 velocity = -kh->key_velocity;
                     if (velocity < min_velocity) velocity = min_velocity;
                     if (velocity > max_velocity) velocity = max_velocity;
                     u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_pppp, Volume_ffff);
 
-                    midi_send_note_on(starting_note + i, volume);
+                    midi_send_note_on(note, volume);
                     kh->note_off_sent = false;
-                } else if (!kh->note_off_sent) {
-                    midi_send_note_off(starting_note + i);
+                    kh->note_on_sent = true;
+                } else if (!kh->note_off_sent && kh->note_on_sent ) {
+                    midi_send_note_off(note);
                     kh->note_off_sent = true;
+                    kh->note_on_sent = false;
                 }
             }
         }
-		
-		
-		
-			
 
         while ((TIFR1 & (1 << OCF1A)) == 0);
         TIFR1 |= 1 << OCF1A;
     }
 }
-ISR(PCINT0_vect){
 
-	if((PINB & (1<<1))!=0) {
-			starting_note--;
-			if((starting_note < Note_C) && (octave == 0)) {
-				
-				starting_note = Note_C;
-				octave = 0;
-			}
-			else if(starting_note < Note_C) {
-				starting_note = Note_Bb;
-				octave -= 1;
-			}
-			
-	
-			
-		}
-		if((PINB & (1<<2))!=0) {
+ISR(PCINT0_vect) {
+    bool left = PINB & (1 << BUTTON_LEFT);
+    bool middle = PINB & (1 << BUTTON_MIDDLE);
+    bool right = PINB & (1 << BUTTON_RIGHT);
 
-			starting_note++;
-			if(starting_note > (Note_Bb)) {
-				starting_note = Note_C;
-				octave += 1;
-			}
-			
-			
-			
-			
-		}
-		if((PINB & (1<<3))!=0) {
-			simulate_hammer = !simulate_hammer;
-			
-				
-			
-		
-		}
-		lcd_cmd(Display_Clear);
-		_delay_us(2000);
-		if(simulate_hammer == true){
-				
-				
-				lcd_goto(0,1);
-				lcd_printf("Piano Mode");
-			}
-			if(simulate_hammer == false) {
-				
-				
-				lcd_goto(0,1);
-				lcd_printf("Keyboard Mode");
-			}
-			
-			
-			lcd_goto(0,0);
-			
-			print_notes();
-			
-		
-}		
-	
+    if (left) {
+        if (starting_note > 0) starting_note -= 1;
+    } else if (middle) {
+        if (starting_note < 0x7F) starting_note += 1;
+    } else if (right) {
+        simulate_hammer = !simulate_hammer;
+    }
+
+    redraw_lcd();
+}

@@ -55,9 +55,10 @@ void audio_input_callback(void *buffer, unsigned int frames) {
     }    
 }
 
-int key = 0;
-int min_adc = 546;
-int max_adc = 813;
+int key = 1;
+int min_adc = 558;
+int max_adc = 751;
+int offset = 3;
 
 double halleffect_distance_curve(int port, double index) {
     // magic numbers. oooooooooooh. aaaaaaaaaaaaah
@@ -232,12 +233,14 @@ void key_and_hammer(void) {
 
 
         float current_adc = (float)raw_adc;
+
         if (current_adc < min_adc) {
             current_adc = min_adc;
         }
 
         /* printf("%f\n", current_adc); */
-        double trigger = highest_value - halleffect_distance_curve(key, current_adc - min_adc + 4.0);
+
+        double trigger = highest_value - halleffect_distance_curve(key, current_adc - min_adc + 1 + offset);
         
         keyhammer_update(&h, trigger, delta_time);
 
@@ -248,7 +251,7 @@ void key_and_hammer(void) {
             ClearBackground(RAYWHITE);
             DrawRectanglePro(rham, (Vector2){ 0, rham.height / 2 }, 0.0f, BLACK);
             /* DrawText(TextFormat("h.pos: %f\nh.key.pos: %f\nsensor: %f\nrham.y: %f\nvelocity: %f\n", h.hammer_pos, h.key_pos, trigger, rham.y, h.key_velocity), 0, 0, 20, BLACK); */
-            DrawText(TextFormat("ADC: %f\nTrigger: %f\n", current_adc, trigger), 0, 0, 20, BLACK);
+            DrawText(TextFormat("ADC: %f\nTrigger: %f\nTravel: %f\n", current_adc, trigger, h.hammer_travel), 0, 0, 20, BLACK);
             if (h.hammer_is_striking) {
                 ClearBackground(GREEN);
                 /* printf("VELOCITY: %f\n", h.speed); */

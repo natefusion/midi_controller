@@ -1,7 +1,21 @@
 #include <math.h>
+#include <stdbool.h>
 
 #include "halleffect.h"
 #include "adc.h"
+
+Hall_Effect halleffect_make(u8 port, u16 op_min_adc, u16 op_max_adc, u16 min_adc, u16 max_adc) {
+    Hall_Effect he;
+    he.port = port;
+    he.operational_min_adc = op_min_adc;
+    he.operational_max_adc = op_max_adc;
+    he.min_adc = min_adc;
+    he.max_adc = max_adc;
+    he.max_distance = halleffect_distance_curve(port, 1.0f);
+    he.min_distance = halleffect_distance_curve(port, max_adc - min_adc + 1);
+    he.parameter_changed = false;
+    return he;
+}
 
 u16 movingaverage_process(Moving_Average *ma, u16 raw_adc) {
     ma->sum -= ma->readings[ma->index];
@@ -33,6 +47,20 @@ float halleffect_distance_curve(u8 port, float index) {
 }
 
 float halleffect_get_value(Hall_Effect *sensor, u16 raw_adc) {
+    /* if (raw_adc < sensor->min_adc) { */
+    /*     sensor->min_adc = raw_adc; */
+    /*     sensor->parameter_changed = true; */
+    /* } */
+
+    /* if (raw_adc > sensor->max_adc) { */
+    /*     sensor->max_adc = raw_adc; */
+    /*     sensor->parameter_changed = true; */
+    /* } */
+
+    /* if (sensor->parameter_changed) { */
+    /*     sensor->min_distance = halleffect_distance_curve(sensor->port, sensor->max_adc - sensor->min_adc + 1); */
+    /* } */
+
     u16 averaged_adc = movingaverage_process(&sensor->ma, raw_adc);
     
     // less than this means sensor is not calibrated or sensor jitter
@@ -45,13 +73,12 @@ float halleffect_get_value(Hall_Effect *sensor, u16 raw_adc) {
     if (averaged_adc > sensor->operational_max_adc)
         averaged_adc = sensor->operational_max_adc;
     
-    u16 index = averaged_adc - sensor->min_adc + 1;
-    u16 offset = 3; // the first values are not good, tweak this as necessary
-    
-    if (averaged_adc >= sensor->max_adc) {
-        index = sensor->max_adc - sensor->min_adc + 1;
-    }
+    /* if (averaged_adc >= sensor->max_adc) { */
+    /*     index = sensor->max_adc - sensor->min_adc + 1; */
+    /* } */
+
+    float offset = 3.0f;
 
     // We want the number to go up, not down, so subtract distance from sensor from max distance
-    return sensor->max_distance - halleffect_distance_curve(sensor->port, (float)(index + offset));
+    return sensor->max_distance - halleffect_distance_curve(sensor->port, averaged_adc - sensor->min_adc + 1.0f + offset);
 }

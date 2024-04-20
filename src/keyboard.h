@@ -2,6 +2,7 @@
 #define KEYBOARD_H
 
 #include "misc.h"
+
 #include <stdbool.h>
 
 typedef struct Key_Hammer {
@@ -18,7 +19,6 @@ typedef struct Key_Hammer {
     bool hammer_is_striking;
     bool key_is_striking;
     bool note_on_sent;
-    bool note_off_sent;
 } Key_Hammer;
 
 Key_Hammer keyhammer_make(float travel);

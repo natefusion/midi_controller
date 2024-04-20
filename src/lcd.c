@@ -1,8 +1,11 @@
-#include "lcd.h"
-#include <stdarg.h>
-#include <util/delay.h>
+#include "misc.h"
+
 #include <avr/io.h>
+#include <util/delay.h>
 #include <stdio.h>
+#include <stdarg.h>
+
+#include "lcd.h"
 
 #define LCD_RS 4
 #define LCD_EN 5
@@ -80,6 +83,11 @@ void lcd_data(u8 data) {
     poke_enable();
 }
 
+void lcd_display_clear(void) {
+    lcd_cmd(Display_Clear);
+    _delay_us(2000);
+}
+
 void lcd_init(void) {
   DDRD |= 0xF0;
   DDRB |= (1 << LCD_EN) | (1 << LCD_RS);
@@ -88,13 +96,7 @@ void lcd_init(void) {
   lcd_cmd(0x32); // enable 4 bit mode part 2
   lcd_cmd(0x28); // enable 5x7 display for 4 bit mode
   lcd_cmd(Set_Display_On_Cursor_Off);
-  lcd_cmd(Display_Clear);
-  _delay_us(2000);
-}
-
-void lcd_display_clear(void) {
-    lcd_cmd(Display_Clear);
-    _delay_us(2000);
+  lcd_display_clear();
 }
 
 void lcd_goto(u8 x, u8 y) {

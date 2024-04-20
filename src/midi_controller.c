@@ -12,8 +12,11 @@
 #include "adc.h"
 #include "halleffect.h"
 
+// 10 millisecond loop period
+// which is long enough to do the calculations but short enough to be responsive
 #define SCALED_CYCLES_PER_LOOP 20000
 #define DELTA_TIME (float)SCALED_CYCLES_PER_LOOP * 8.0f / (float)F_CPU
+
 #define NUM_SENSORS 5
 
 #define BUTTON_LEFT 1
@@ -91,7 +94,7 @@ void redraw_lcd(void) {
 
 void debug(Hall_Effect sensors[NUM_SENSORS]) {
     u8 port = 0;
-    u16 val = adc_read_port(port);//movingaverage_process(&sensors[port].ma, adc_read_port(port));
+    u16 val = adc_read_port(port);
     usart_send_char(val & 0x00FF);
     usart_send_char((val & 0xFF00) >> 8);
 }
@@ -102,7 +105,7 @@ int main(void) {
     lcd_init();
 
     Hall_Effect sensors[NUM_SENSORS] = {
-        // don't change the second and third arguments please
+        // don't change the second and third arguments please.
         halleffect_make(0, 532, 879, 545, 868),
         halleffect_make(1, 518, 878, 533, 875),
         halleffect_make(2, 527, 879, 541, 649),
@@ -118,6 +121,7 @@ int main(void) {
         keyhammer_make(sensors[4].max_distance - sensors[4].min_distance),
     };
 
+    // calibration happens BEFORE interrupts are enabled to avoid conflicts
     calibrate(sensors);
 
     redraw_lcd();
@@ -126,7 +130,7 @@ int main(void) {
     DDRB &= ~(1 << BUTTON_MIDDLE);
     DDRB &= ~(1 << BUTTON_RIGHT);
     sei();
-    PCICR = (1<<PCIE0);
+    PCICR = 1 << PCIE0;
     PCMSK0 = (1 << BUTTON_LEFT) | (1 << BUTTON_MIDDLE) | (1 << BUTTON_RIGHT);
 
     TCCR1A = 0;
@@ -134,10 +138,9 @@ int main(void) {
     OCR1A = SCALED_CYCLES_PER_LOOP;
     TCNT1 = 0;
 
-    // these numbers were hand picked arbitrarily
-
     while (1) {
-        /* debug(sensors); */
+        // only send midi messages in the main loop to keep things tidy
+        // I don't think it really matters for interrupts though
         if (turn_all_notes_off) {
             midi_set_controller(Controller_Notes_Off, 0);
             turn_all_notes_off = false;
@@ -153,7 +156,7 @@ int main(void) {
             keyhammer_update(kh, position_mm, DELTA_TIME);
 
             if (simulate_hammer) {
-                if (kh->hammer_is_striking) {
+                if (kh->hammer_is_striking && !kh->note_on_sent) {
                     i32 min_velocity = 100;
                     i32 max_velocity = 1000;
                     i32 velocity = -kh->hammer_velocity;
@@ -171,12 +174,10 @@ int main(void) {
                     }
                 }
             } else {
-                // this still needs some work.
                 if (kh->key_is_striking && !kh->note_on_sent) {
                     i32 min_velocity = 90;
                     i32 max_velocity = 150;
                     i32 velocity = kh->key_velocity;
-                                   
                     if (velocity < min_velocity) velocity = min_velocity;
                     if (velocity > max_velocity) velocity = max_velocity;
                     u8 volume = (u8)map(velocity, min_velocity, max_velocity, Volume_ppp, Volume_fff);

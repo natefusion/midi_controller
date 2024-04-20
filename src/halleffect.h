@@ -3,7 +3,9 @@
 
 #include "misc.h"
 
-/*
+/* These are the parameters for the Voltage vs Gauss curve for each sensor
+   0 is leftmost sensor, 4 is rightmost sensor
+   
   0: q=2.595, s=1.700
   1: q=2.525, s=1.765
   2: q=2.570, s=1.725

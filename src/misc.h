@@ -1,9 +1,9 @@
 #ifndef MISC_H
 #define MISC_H
 
-#define F_CPU 16000000
-
 #include <stdint.h>
+
+#define F_CPU 16000000
 
 typedef uint8_t  u3;
 typedef uint8_t  u4;

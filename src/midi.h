@@ -3,6 +3,8 @@
 
 #include "misc.h"
 
+// Most of this is unused. We could only do so much
+
 typedef enum Status {
   Status_Note_On = 0x90,
   Status_Note_Off = 0x80,
@@ -213,10 +215,10 @@ typedef enum Instrument {
   Gunshot,
 } Instrument;
 
-char *note_range_tostring(Note note);
-
 /* Initializes serial port for communication */
 void midi_init(void);
+
+char *note_range_tostring(Note note);
 
 void usart_printf(const char* fmt, ...);
 void usart_send_char(u8 c);
@@ -231,10 +233,8 @@ void midi_send_drum_off(Instrument drum);
    values of 0x0000-0x1FFF will lower the pitch */ 
 void midi_set_pitch_bend(u14 value);
 
-void midi_set_pressure(Note note, u7 value);
-
+void midi_set_pressure(Note note, u7 value); // I would have liked to implement this on the keyboard ...
 void midi_set_instrument(Instrument i);
-
 void midi_set_controller(Controller c, u7 value);
 
 #endif

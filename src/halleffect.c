@@ -35,6 +35,8 @@ u16 movingaverage_process(Moving_Average *ma, u16 raw_adc) {
 
 float halleffect_distance_curve(u8 port, float index) {
     // magic numbers. oooooooooooh. aaaaaaaaaaaaah
+    // These were generated using code in extra/generate-distance-table.lisp
+    // Which is not C code. oops.
     switch (port) {
     case 0:
         return 45.958904f * powf(index, -0.44967207f);
@@ -66,12 +68,13 @@ float halleffect_get_value(Hall_Effect *sensor, u16 raw_adc) {
         averaged_adc = sensor->operational_max_adc;
     
     float index = (float)(averaged_adc - sensor->min_adc + 1);
+    // The keyboard behaves better when we offset the input a little
     float offset = 3.0f;
 
     if (averaged_adc >= sensor->max_adc) {
         index = sensor->max_adc - sensor->min_adc + 1;
     }
 
-    // We want the number to go up, not down, so subtract distance from sensor from max distance
+    // We want the number to go up, not down, when the key is pressed so subtract distance from sensor from max distance
     return sensor->max_distance - halleffect_distance_curve(sensor->port, index + offset);
 }

@@ -15,7 +15,6 @@ Key_Hammer keyhammer_make(float travel) {
         .hammer_is_striking = false,
         .key_is_striking = false,
         .note_on_sent = false,
-        .note_off_sent = false,
     };
 }
 
@@ -24,6 +23,7 @@ void keyhammer_update(Key_Hammer* kh, float pos, float dt) {
     kh->key_pos = pos;
     kh->key_velocity = (kh->key_pos - kh->key_pos_prev) / dt;
 
+    // I don't think we need to average the speed since the input data is already filtered
     float original_speed = kh->hammer_velocity;
     kh->hammer_velocity -= kh->gravity * dt;
     kh->hammer_pos += (original_speed + kh->hammer_velocity) * dt / 2;

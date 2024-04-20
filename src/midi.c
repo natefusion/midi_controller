@@ -50,7 +50,7 @@ char *note_range_tostring(Note note) {
 void midi_init(void) {
     UCSR0B = 1 << TXEN0;
     UCSR0C = (1 << UCSZ01) | (1 << UCSZ00); // 8 bit data
-    UBRR0L = 16; // 57600 Baud
+    UBRR0L = 8; // 57600 Baud changed to 115000
 }
 
 void midi_send_note_on(Note note, Volume vol) {
